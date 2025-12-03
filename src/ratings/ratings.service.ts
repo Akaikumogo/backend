@@ -116,9 +116,11 @@ export class RatingsService {
 
       const ratingRegionId = rating.regionId?.toString?.() || 
         (typeof rating.regionId === 'object' && rating.regionId?._id?.toString()) ||
-        (typeof rating.regionId === 'object' && rating.regionId?.id?.toString());
+        (typeof rating.regionId === 'object' && rating.regionId?.id?.toString()) ||
+        '';
 
       if (
+        ratingRegionId &&
         !currentUser.allowedRegions
           .map((rid) => rid.toString())
           .includes(ratingRegionId)

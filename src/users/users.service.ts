@@ -99,16 +99,20 @@ export class UsersService {
         if (feedback.regionId) {
           if (typeof feedback.regionId === 'object' && feedback.regionId._id) {
             regionId = feedback.regionId._id.toString();
-            region = {
-              id: regionId,
-              name: feedback.regionId.name,
-            };
+            if (regionId) {
+              region = {
+                id: regionId,
+                name: feedback.regionId.name,
+              };
+            }
           } else if (typeof feedback.regionId === 'object' && feedback.regionId.id) {
             regionId = feedback.regionId.id.toString();
-            region = {
-              id: regionId,
-              name: feedback.regionId.name,
-            };
+            if (regionId) {
+              region = {
+                id: regionId,
+                name: feedback.regionId.name,
+              };
+            }
           } else {
             regionId = feedback.regionId.toString();
           }
@@ -120,18 +124,22 @@ export class UsersService {
         if (feedback.ratingId) {
           if (typeof feedback.ratingId === 'object' && feedback.ratingId._id) {
             ratingId = feedback.ratingId._id.toString();
-            rating = {
-              id: ratingId,
-              rating: feedback.ratingId.rating,
-              comment: feedback.ratingId.comment,
-            };
+            if (ratingId) {
+              rating = {
+                id: ratingId,
+                rating: feedback.ratingId.rating,
+                comment: feedback.ratingId.comment,
+              };
+            }
           } else if (typeof feedback.ratingId === 'object' && feedback.ratingId.id) {
             ratingId = feedback.ratingId.id.toString();
-            rating = {
-              id: ratingId,
-              rating: feedback.ratingId.rating,
-              comment: feedback.ratingId.comment,
-            };
+            if (ratingId) {
+              rating = {
+                id: ratingId,
+                rating: feedback.ratingId.rating,
+                comment: feedback.ratingId.comment,
+              };
+            }
           } else {
             ratingId = feedback.ratingId.toString();
           }
@@ -183,16 +191,20 @@ export class UsersService {
       if (feedback.regionId) {
         if (typeof feedback.regionId === 'object' && feedback.regionId._id) {
           regionId = feedback.regionId._id.toString();
-          region = {
-            id: regionId,
-            name: feedback.regionId.name,
-          };
+          if (regionId) {
+            region = {
+              id: regionId,
+              name: feedback.regionId.name,
+            };
+          }
         } else if (typeof feedback.regionId === 'object' && feedback.regionId.id) {
           regionId = feedback.regionId.id.toString();
-          region = {
-            id: regionId,
-            name: feedback.regionId.name,
-          };
+          if (regionId) {
+            region = {
+              id: regionId,
+              name: feedback.regionId.name,
+            };
+          }
         } else {
           regionId = feedback.regionId.toString();
         }
@@ -204,18 +216,22 @@ export class UsersService {
       if (feedback.ratingId) {
         if (typeof feedback.ratingId === 'object' && feedback.ratingId._id) {
           ratingId = feedback.ratingId._id.toString();
-          rating = {
-            id: ratingId,
-            rating: feedback.ratingId.rating,
-            comment: feedback.ratingId.comment,
-          };
+          if (ratingId) {
+            rating = {
+              id: ratingId,
+              rating: feedback.ratingId.rating,
+              comment: feedback.ratingId.comment,
+            };
+          }
         } else if (typeof feedback.ratingId === 'object' && feedback.ratingId.id) {
           ratingId = feedback.ratingId.id.toString();
-          rating = {
-            id: ratingId,
-            rating: feedback.ratingId.rating,
-            comment: feedback.ratingId.comment,
-          };
+          if (ratingId) {
+            rating = {
+              id: ratingId,
+              rating: feedback.ratingId.rating,
+              comment: feedback.ratingId.comment,
+            };
+          }
         } else {
           ratingId = feedback.ratingId.toString();
         }

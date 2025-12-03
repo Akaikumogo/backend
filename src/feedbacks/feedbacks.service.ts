@@ -154,9 +154,11 @@ export class FeedbacksService {
 
       const feedbackRegionId = feedback.regionId?.toString?.() || 
         (typeof feedback.regionId === 'object' && feedback.regionId?._id?.toString()) ||
-        (typeof feedback.regionId === 'object' && feedback.regionId?.id?.toString());
+        (typeof feedback.regionId === 'object' && feedback.regionId?.id?.toString()) ||
+        '';
 
       if (
+        feedbackRegionId &&
         !currentUser.allowedRegions
           .map((rid) => rid.toString())
           .includes(feedbackRegionId)
