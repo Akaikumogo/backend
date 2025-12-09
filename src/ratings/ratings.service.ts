@@ -1,10 +1,15 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { FilterQuery, Model, Types } from 'mongoose';
 import type { SortOrder } from 'mongoose';
 import { Rating, RatingDocument } from './schemas/rating.schema';
 import { CreateRatingDto } from './dto/create-rating.dto';
 import { QueryRatingDto } from './dto/query-rating.dto';
+import { RatingStatsQueryDto, RatingPeriod } from './dto/rating-stats.dto';
 import { Region, RegionDocument } from '../regions/schemas/region.schema';
 import { buildPaginationMeta } from '../common/pagination/pagination.util';
 import { RequestUser } from '../common/types/request-user.type';
@@ -135,6 +140,197 @@ export class RatingsService {
     };
   }
 
+  async getStats(query: RatingStatsQueryDto, currentUser: RequestUser) {
+    const { period = 'week', region, startDate, endDate } = query;
+
+    const { start, end } = this.resolveDateRange(period, startDate, endDate);
+    if (!start || !end || start > end) {
+      throw new BadRequestException('Invalid date range');
+    }
+
+    let allowedRegions: Types.ObjectId[] | undefined;
+    if (currentUser.role === AdminRole.ADMIN) {
+      if (!currentUser.allowedRegions?.length) {
+        return {
+          success: true,
+          data: {
+            period,
+            range: { start: start.toISOString(), end: end.toISOString() },
+            distribution: [],
+            trend: [],
+          },
+        };
+      }
+      allowedRegions = currentUser.allowedRegions.map(
+        (id) => new Types.ObjectId(id),
+      );
+    }
+
+    const regionFilter: FilterQuery<Region> = {};
+    if (region) {
+      const regionObjectId = new Types.ObjectId(region);
+      if (
+        allowedRegions &&
+        !allowedRegions.some((rid) => rid.equals(regionObjectId))
+      ) {
+        return {
+          success: true,
+          data: {
+            period,
+            range: { start: start.toISOString(), end: end.toISOString() },
+            distribution: [],
+            trend: [],
+          },
+        };
+      }
+      regionFilter._id = regionObjectId;
+    } else if (allowedRegions) {
+      regionFilter._id = { $in: allowedRegions };
+    }
+
+    const regions = await this.regionModel
+      .find(regionFilter)
+      .select('id name')
+      .lean({ virtuals: true });
+
+    if (!regions.length) {
+      return {
+        success: true,
+        data: {
+          period,
+          range: { start: start.toISOString(), end: end.toISOString() },
+          distribution: [],
+          trend: [],
+        },
+      };
+    }
+
+    const ratingMatch: Record<string, any> = {
+      $expr: {
+        $and: [
+          { $gte: [{ $ifNull: ['$created_at', '$submittedAt'] }, start] },
+          { $lte: [{ $ifNull: ['$created_at', '$submittedAt'] }, end] },
+        ],
+      },
+    };
+
+    if (region) {
+      ratingMatch.regionId = new Types.ObjectId(region);
+    } else if (allowedRegions) {
+      ratingMatch.regionId = { $in: allowedRegions };
+    }
+
+    const [distributionRaw, trendRaw] = await Promise.all([
+      this.ratingModel.aggregate<{
+        regionId: Types.ObjectId;
+        rating: number;
+        count: number;
+      }>([
+        { $match: ratingMatch },
+        {
+          $group: {
+            _id: { regionId: '$regionId', rating: '$rating' },
+            count: { $sum: 1 },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            regionId: '$_id.regionId',
+            rating: '$_id.rating',
+            count: 1,
+          },
+        },
+      ]),
+      this.ratingModel.aggregate<{
+        regionId: Types.ObjectId;
+        date: string;
+        average: number;
+        count: number;
+      }>([
+        { $match: ratingMatch },
+        {
+          $group: {
+            _id: {
+              regionId: '$regionId',
+              bucket: {
+                $dateToString: {
+                  format: this.resolveDateFormat(period),
+                  date: { $ifNull: ['$created_at', '$submittedAt'] },
+                },
+              },
+            },
+            average: { $avg: '$rating' },
+            count: { $sum: 1 },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            regionId: '$_id.regionId',
+            date: '$_id.bucket',
+            average: { $round: ['$average', 2] },
+            count: 1,
+          },
+        },
+        { $sort: { date: 1 } },
+      ]),
+    ]);
+
+    const distribution = regions.map((regionDoc) => {
+      const regionId =
+        (regionDoc as any)._id?.toString?.() || (regionDoc as any).id?.toString();
+      const base = { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0 };
+
+      distributionRaw
+        .filter((item) => item.regionId?.toString() === regionId)
+        .forEach((item) => {
+          const key = item.rating?.toString() as '1' | '2' | '3' | '4' | '5';
+          if (base[key] !== undefined) {
+            base[key] += item.count;
+          }
+        });
+
+      const total =
+        base['1'] + base['2'] + base['3'] + base['4'] + base['5'];
+
+      return {
+        regionId,
+        regionName: (regionDoc as any).name,
+        counts: base,
+        total,
+      };
+    });
+
+    const trend = regions.map((regionDoc) => {
+      const regionId =
+        (regionDoc as any)._id?.toString?.() || (regionDoc as any).id?.toString();
+      const points = trendRaw
+        .filter((item) => item.regionId?.toString() === regionId)
+        .map((item) => ({
+          date: item.date,
+          average: item.average,
+          count: item.count,
+        }));
+
+      return {
+        regionId,
+        regionName: (regionDoc as any).name,
+        points,
+      };
+    });
+
+    return {
+      success: true,
+      data: {
+        period,
+        range: { start: start.toISOString(), end: end.toISOString() },
+        distribution,
+        trend,
+      },
+    };
+  }
+
   private async ensureRegion(regionId: string) {
     const exists = await this.regionModel.exists({ _id: regionId });
     if (!exists) {
@@ -188,5 +384,51 @@ export class RatingsService {
       comment: rating.comment,
       submittedAt: rating.submittedAt,
     };
+  }
+
+  private resolveDateRange(
+    period: RatingPeriod,
+    startDate?: string,
+    endDate?: string,
+  ) {
+    const end = endDate ? new Date(endDate) : new Date();
+    if (Number.isNaN(end.getTime())) {
+      throw new BadRequestException('Invalid end date');
+    }
+    end.setHours(23, 59, 59, 999);
+
+    let start: Date;
+    if (startDate) {
+      start = new Date(startDate);
+      if (Number.isNaN(start.getTime())) {
+        throw new BadRequestException('Invalid start date');
+      }
+      start.setHours(0, 0, 0, 0);
+    } else {
+      start = new Date(end);
+      start.setHours(0, 0, 0, 0);
+      if (period === 'day') {
+        // already start of today
+      } else if (period === 'week') {
+        start.setDate(start.getDate() - 6);
+      } else if (period === 'month') {
+        start = new Date(start.getFullYear(), start.getMonth(), 1);
+      } else if (period === 'year') {
+        start = new Date(start.getFullYear(), 0, 1);
+      }
+    }
+
+    return { start, end };
+  }
+
+  private resolveDateFormat(period: RatingPeriod) {
+    // keep daily buckets even for week/month/year to show smooth trend
+    if (period === 'day' || period === 'week') {
+      return '%Y-%m-%d';
+    }
+    if (period === 'month') {
+      return '%Y-%m-%d';
+    }
+    return '%Y-%m-%d';
   }
 }
