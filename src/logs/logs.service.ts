@@ -11,8 +11,8 @@ export class LogsService {
     @InjectModel(Log.name) private readonly logModel: Model<LogDocument>,
   ) {}
 
-  async record(action: string, userId: string) {
-    await this.logModel.create({ action, user_id: userId, timestamp: new Date() });
+  async record(action: string, userId: string | null) {
+    await this.logModel.create({ action, user_id: userId || undefined, timestamp: new Date() });
   }
 
   async findAll(query: QueryLogsDto) {

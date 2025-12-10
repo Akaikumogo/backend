@@ -11,8 +11,8 @@ export class Log extends BaseEntity {
   @Prop({ required: true })
   action!: string;
 
-  @Prop({ required: true })
-  user_id!: string;
+  @Prop({ required: false })
+  user_id?: string;
 
   @Prop({ default: () => new Date() })
   timestamp!: Date;

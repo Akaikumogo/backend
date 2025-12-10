@@ -23,22 +23,14 @@ export class AuthService {
 
     if (!admin) {
       // Log failed login attempt
-      await this.logsService.record('FAILED_LOGIN', null, {
-        email: dto.email,
-        ip: request?.ip || 'unknown',
-        reason: 'User not found',
-      });
+      await this.logsService.record('FAILED_LOGIN', null);
       throw new UnauthorizedException('Invalid credentials');
     }
 
     const isMatch = await comparePassword(dto.password, admin.password);
     if (!isMatch) {
       // Log failed login attempt
-      await this.logsService.record('FAILED_LOGIN', admin.id, {
-        email: dto.email,
-        ip: request?.ip || 'unknown',
-        reason: 'Invalid password',
-      });
+      await this.logsService.record('FAILED_LOGIN', admin.id);
       throw new UnauthorizedException('Invalid credentials');
     }
 
