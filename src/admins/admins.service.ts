@@ -75,7 +75,11 @@ export class AdminsService implements OnModuleInit {
     const andConditions: FilterQuery<AdminDocument>[] = [];
 
     if (search) {
-      const regex = new RegExp(search, 'i');
+      // Escape regex special characters to prevent ReDoS and NoSQL injection
+      const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      // Limit search length to prevent DoS
+      const safeSearch = escapedSearch.substring(0, 100);
+      const regex = new RegExp(safeSearch, 'i');
       filter.$or = [{ fullname: regex }, { email: regex }];
     }
 

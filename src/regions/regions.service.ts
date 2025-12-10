@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -80,12 +81,12 @@ export class RegionsService {
     // If user is ADMIN, check if they have access to this region
     if (currentUser?.role === AdminRole.ADMIN) {
       if (!currentUser.allowedRegions?.length) {
-        throw new NotFoundException('Region not found');
+        throw new ForbiddenException('Access denied');
       }
 
       const regionIdString = region._id?.toString() || region.id?.toString();
       if (!currentUser.allowedRegions.includes(regionIdString)) {
-        throw new NotFoundException('Region not found');
+        throw new ForbiddenException('Access denied');
       }
     }
 
@@ -129,9 +130,10 @@ export class RegionsService {
         : 0,
     };
 
-    // Count admins assigned to this region
+    // Count admins assigned to this region (exclude super admins)
     const adminCount = await this.adminModel.countDocuments({
       allowedRegions: new Types.ObjectId(id),
+      role: { $ne: AdminRole.SUPER_ADMIN }, // Exclude super admins
     });
 
     return {

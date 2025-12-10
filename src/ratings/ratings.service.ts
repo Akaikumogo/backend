@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -116,7 +117,7 @@ export class RatingsService {
 
     if (currentUser.role === AdminRole.ADMIN) {
       if (!currentUser.allowedRegions?.length) {
-        throw new NotFoundException('Rating not found');
+        throw new ForbiddenException('Access denied');
       }
 
       const ratingRegionId = rating.regionId?.toString?.() || 
@@ -130,7 +131,7 @@ export class RatingsService {
           .map((rid) => rid.toString())
           .includes(ratingRegionId)
       ) {
-        throw new NotFoundException('Rating not found');
+        throw new ForbiddenException('Access denied');
       }
     }
 

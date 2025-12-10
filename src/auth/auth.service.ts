@@ -18,15 +18,27 @@ export class AuthService {
     private readonly logsService: LogsService,
   ) {}
 
-  async login(dto: LoginDto) {
+  async login(dto: LoginDto, request?: any) {
     const admin = await this.adminsService.findByEmail(dto.email);
 
     if (!admin) {
+      // Log failed login attempt
+      await this.logsService.record('FAILED_LOGIN', null, {
+        email: dto.email,
+        ip: request?.ip || 'unknown',
+        reason: 'User not found',
+      });
       throw new UnauthorizedException('Invalid credentials');
     }
 
     const isMatch = await comparePassword(dto.password, admin.password);
     if (!isMatch) {
+      // Log failed login attempt
+      await this.logsService.record('FAILED_LOGIN', admin.id, {
+        email: dto.email,
+        ip: request?.ip || 'unknown',
+        reason: 'Invalid password',
+      });
       throw new UnauthorizedException('Invalid credentials');
     }
 
@@ -63,17 +75,19 @@ export class AuthService {
         throw new UnauthorizedException('Invalid refresh token');
       }
 
+      // Fixed: Use database values instead of token values
+      // This ensures role and allowedRegions changes are reflected immediately
       const tokens = await this.generateTokens(
         admin.id,
         admin.email,
-        payload.role,
+        admin.role, // From database, not token
         admin.fullname,
-        admin.allowedRegions,
+        admin.allowedRegions, // From database, not token
       );
 
       return {
         ...tokens,
-        role: payload.role,
+        role: admin.role, // From database
         user: {
           id: admin.id,
           fullname: admin.fullname,

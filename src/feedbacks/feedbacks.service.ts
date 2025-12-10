@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import type { SortOrder } from 'mongoose';
@@ -103,7 +103,11 @@ export class FeedbacksService {
     }
 
     if (search) {
-      const regex = new RegExp(search, 'i');
+      // Escape regex special characters to prevent ReDoS and NoSQL injection
+      const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      // Limit search length to prevent DoS
+      const safeSearch = escapedSearch.substring(0, 100);
+      const regex = new RegExp(safeSearch, 'i');
       filter.$or = [
         { 'userInfo.firstName': regex },
         { 'userInfo.lastName': regex },
@@ -137,8 +141,14 @@ export class FeedbacksService {
   }
 
   async findOne(id: string, currentUser: RequestUser) {
+    // Validate ObjectId format
+    if (!Types.ObjectId.isValid(id)) {
+      throw new NotFoundException('Feedback not found');
+    }
+
+    const objectId = new Types.ObjectId(id);
     const feedback = await this.feedbackModel
-      .findById(id)
+      .findOne({ _id: objectId })
       .populate('regionId', 'id name')
       .populate('ratingId', 'id rating comment')
       .lean({ virtuals: true });
@@ -149,21 +159,25 @@ export class FeedbacksService {
 
     if (currentUser.role === AdminRole.ADMIN) {
       if (!currentUser.allowedRegions?.length) {
-        throw new NotFoundException('Feedback not found');
+        throw new ForbiddenException('Access denied');
       }
 
-      const feedbackRegionId = feedback.regionId?.toString?.() || 
-        (typeof feedback.regionId === 'object' && feedback.regionId?._id?.toString()) ||
-        (typeof feedback.regionId === 'object' && feedback.regionId?.id?.toString()) ||
-        '';
+      // Handle regionId - use exact same logic as formatFeedback method
+      let feedbackRegionId: string | undefined;
+      if (feedback.regionId) {
+        if (typeof feedback.regionId === 'object' && feedback.regionId._id) {
+          feedbackRegionId = feedback.regionId._id.toString();
+        } else if (typeof feedback.regionId === 'object' && feedback.regionId.id) {
+          feedbackRegionId = feedback.regionId.id.toString();
+        } else {
+          feedbackRegionId = feedback.regionId.toString();
+        }
+      }
 
-      if (
-        feedbackRegionId &&
-        !currentUser.allowedRegions
-          .map((rid) => rid.toString())
-          .includes(feedbackRegionId)
-      ) {
-        throw new NotFoundException('Feedback not found');
+      // Check if feedbackRegionId is in allowedRegions (same logic as findAll)
+      // allowedRegions is already string[], so we can directly use includes
+      if (!feedbackRegionId || !currentUser.allowedRegions.includes(feedbackRegionId)) {
+        throw new ForbiddenException('Access denied');
       }
     }
 
@@ -174,7 +188,12 @@ export class FeedbacksService {
   }
 
   async update(id: string, dto: UpdateFeedbackStatusDto, currentUser: RequestUser) {
-    const feedback = await this.feedbackModel.findById(id);
+    // Validate ObjectId format
+    if (!Types.ObjectId.isValid(id)) {
+      throw new NotFoundException('Feedback not found');
+    }
+
+    const feedback = await this.feedbackModel.findById(new Types.ObjectId(id));
 
     if (!feedback) {
       throw new NotFoundException('Feedback not found');
@@ -182,15 +201,22 @@ export class FeedbacksService {
 
     if (currentUser.role === AdminRole.ADMIN) {
       if (!currentUser.allowedRegions?.length) {
-        throw new NotFoundException('Feedback not found');
+        throw new ForbiddenException('Access denied');
       }
 
-      if (
-        !currentUser.allowedRegions
-          .map((rid) => rid.toString())
-          .includes(feedback.regionId.toString())
-      ) {
-        throw new NotFoundException('Feedback not found');
+      // Handle regionId - could be ObjectId or populated object
+      let feedbackRegionId: string;
+      if (typeof feedback.regionId === 'object' && feedback.regionId._id) {
+        feedbackRegionId = feedback.regionId._id.toString();
+      } else if (typeof feedback.regionId === 'object' && feedback.regionId.id) {
+        feedbackRegionId = feedback.regionId.id.toString();
+      } else {
+        feedbackRegionId = feedback.regionId.toString();
+      }
+
+      // Check if feedbackRegionId is in allowedRegions (same logic as findAll)
+      if (!currentUser.allowedRegions.includes(feedbackRegionId)) {
+        throw new ForbiddenException('Access denied');
       }
     }
 
@@ -238,6 +264,16 @@ export class FeedbacksService {
   }
 
   private formatFeedback(feedback: any) {
+    // Handle feedback ID - prioritize _id over id
+    let feedbackId: string;
+    if (feedback._id) {
+      feedbackId = feedback._id.toString();
+    } else if (feedback.id) {
+      feedbackId = feedback.id.toString();
+    } else {
+      throw new Error('Feedback ID is missing');
+    }
+
     // Handle ratingId - could be ObjectId or populated object
     let ratingId: string | undefined;
     if (feedback.ratingId) {
@@ -263,8 +299,8 @@ export class FeedbacksService {
     }
 
     return {
-      id: feedback._id?.toString() || feedback.id,
-      feedbackId: feedback._id?.toString() || feedback.id,
+      id: feedbackId,
+      feedbackId: feedbackId,
       ratingId: ratingId,
       rating: feedback.ratingId && typeof feedback.ratingId === 'object'
         ? {

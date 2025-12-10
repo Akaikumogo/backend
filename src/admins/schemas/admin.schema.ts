@@ -13,7 +13,7 @@ export class Admin extends BaseEntity {
   @Prop({ required: true })
   fullname!: string;
 
-  @Prop({ required: true, unique: true, lowercase: true, trim: true })
+  @Prop({ required: true, unique: true, lowercase: true, trim: true, index: true })
   email!: string;
 
   @Prop({ required: true })

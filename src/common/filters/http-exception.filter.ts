@@ -10,6 +10,12 @@ import {
 @Catch()
 export class GlobalHttpExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(GlobalHttpExceptionFilter.name);
+  private readonly isProduction: boolean;
+
+  constructor() {
+    // Check environment variable directly
+    this.isProduction = process.env.NODE_ENV === 'production';
+  }
 
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
@@ -33,10 +39,17 @@ export class GlobalHttpExceptionFilter implements ExceptionFilter {
       }
     }
 
+    // Log full error details (including stack trace) for debugging
     this.logger.error(
       `${request.method} ${request.url} -> ${status}: ${message}`,
       exception instanceof Error ? exception.stack : undefined,
     );
+
+    // In production, don't expose internal error details
+    if (this.isProduction && status === HttpStatus.INTERNAL_SERVER_ERROR) {
+      message = 'Internal server error';
+      errors = [];
+    }
 
     response.status(status).json({
       success: false,
