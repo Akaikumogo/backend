@@ -15,6 +15,11 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
   const reflector = app.get(Reflector);
   const nodeEnv = configService.get<string>('NODE_ENV') || 'development';
+  app.enableCors({
+    origin: '*',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    credentials: true,
+  });
 
   // Security Headers (Helmet)
   app.use(
