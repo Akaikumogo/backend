@@ -36,7 +36,8 @@ export class FeedbacksService {
     let userId: Types.ObjectId | undefined;
     if (!dto.anonymous && dto.userInfo?.email) {
       const user = await this.usersService.findOrCreate({
-        ...dto.userInfo,
+        fullName: dto.userInfo.fullName,
+        phone: dto.userInfo.phone,
         email: dto.userInfo.email,
       });
       userId = user._id;
@@ -48,7 +49,13 @@ export class FeedbacksService {
       anonymous: dto.anonymous,
       message: dto.message,
       subject: dto.subject,
-      userInfo: dto.anonymous ? undefined : dto.userInfo,
+      userInfo: dto.anonymous
+        ? undefined
+        : {
+            fullName: dto.userInfo?.fullName,
+            phone: dto.userInfo?.phone,
+            email: dto.userInfo?.email,
+          },
       userId: userId,
       status: FeedbackStatus.PENDING,
     });
@@ -109,9 +116,9 @@ export class FeedbacksService {
       const safeSearch = escapedSearch.substring(0, 100);
       const regex = new RegExp(safeSearch, 'i');
       filter.$or = [
-        { 'userInfo.firstName': regex },
-        { 'userInfo.lastName': regex },
+        { 'userInfo.fullName': regex },
         { subject: regex },
+        { message: regex },
       ];
     }
 

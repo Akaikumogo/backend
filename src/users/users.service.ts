@@ -26,11 +26,8 @@ export class UsersService {
 
     if (existingUser) {
       // Update user info if needed
-      existingUser.firstName = userInfo.firstName;
-      existingUser.lastName = userInfo.lastName;
-      existingUser.middleName = userInfo.middleName;
+      existingUser.fullName = userInfo.fullName;
       existingUser.phone = userInfo.phone;
-      existingUser.address = userInfo.address;
       await existingUser.save();
       return existingUser;
     }
@@ -38,11 +35,8 @@ export class UsersService {
     // Create new user
     const newUser = await this.userModel.create({
       email: userInfo.email,
-      firstName: userInfo.firstName,
-      lastName: userInfo.lastName,
-      middleName: userInfo.middleName,
+      fullName: userInfo.fullName,
       phone: userInfo.phone,
-      address: userInfo.address,
     });
 
     return newUser;

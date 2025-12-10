@@ -13,19 +13,10 @@ export class User extends BaseEntity {
   email!: string;
 
   @Prop({ required: true })
-  firstName!: string;
-
-  @Prop({ required: true })
-  lastName!: string;
-
-  @Prop()
-  middleName?: string;
+  fullName!: string;
 
   @Prop({ required: true })
   phone!: string;
-
-  @Prop({ required: true })
-  address!: string;
 }
 
 export type UserDocument = User & Document;

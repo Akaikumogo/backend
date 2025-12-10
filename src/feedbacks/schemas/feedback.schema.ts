@@ -30,11 +30,8 @@ export class Feedback extends BaseEntity {
 
   @Prop({
     type: {
-      firstName: { type: String },
-      lastName: { type: String },
-      middleName: { type: String },
+      fullName: { type: String },
       phone: { type: String },
-      address: { type: String },
       email: { type: String },
     },
   })
