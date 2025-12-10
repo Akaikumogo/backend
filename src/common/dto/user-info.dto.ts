@@ -6,12 +6,12 @@ export class UserInfoDto {
   @IsString()
   fullName!: string;
 
-  @ApiProperty({ required: true, description: 'Phone number' })
-  @IsString()
-  phone!: string;
-
-  @ApiPropertyOptional({ description: 'Email address' })
+  @ApiPropertyOptional({ description: 'Phone number' })
   @IsOptional()
+  @IsString()
+  phone?: string;
+
+  @ApiProperty({ required: true, description: 'Email address' })
   @IsEmail()
-  email?: string;
+  email!: string;
 }

@@ -27,7 +27,9 @@ export class UsersService {
     if (existingUser) {
       // Update user info if needed
       existingUser.fullName = userInfo.fullName;
-      existingUser.phone = userInfo.phone;
+      if (userInfo.phone) {
+        existingUser.phone = userInfo.phone;
+      }
       await existingUser.save();
       return existingUser;
     }

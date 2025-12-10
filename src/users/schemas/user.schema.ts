@@ -15,8 +15,8 @@ export class User extends BaseEntity {
   @Prop({ required: true })
   fullName!: string;
 
-  @Prop({ required: true })
-  phone!: string;
+  @Prop()
+  phone?: string;
 }
 
 export type UserDocument = User & Document;

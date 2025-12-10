@@ -32,7 +32,7 @@ export class Feedback extends BaseEntity {
     type: {
       fullName: { type: String },
       phone: { type: String },
-      email: { type: String },
+      email: { type: String, required: true },
     },
   })
   userInfo?: Record<string, string>;
