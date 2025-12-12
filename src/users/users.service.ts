@@ -17,12 +17,16 @@ export class UsersService {
     private readonly feedbackModel: Model<FeedbackDocument>,
   ) {}
 
-  async findOrCreate(
-    userInfo: UserInfoDto & { email: string },
-  ): Promise<UserDocument> {
-    const existingUser = await this.userModel.findOne({
-      email: userInfo.email,
-    });
+  async findOrCreate(userInfo: UserInfoDto): Promise<UserDocument> {
+    // Prefer email for lookups if provided, otherwise fall back to full name
+    const query: Record<string, any> = {};
+    if (userInfo.email) {
+      query.email = userInfo.email.toLowerCase();
+    } else {
+      query.fullName = userInfo.fullName;
+    }
+
+    const existingUser = await this.userModel.findOne(query);
 
     if (existingUser) {
       // Update user info if needed
@@ -30,13 +34,16 @@ export class UsersService {
       if (userInfo.phone) {
         existingUser.phone = userInfo.phone;
       }
+      if (userInfo.email) {
+        existingUser.email = userInfo.email.toLowerCase();
+      }
       await existingUser.save();
       return existingUser;
     }
 
-    // Create new user
+    // Create new user (email optional)
     const newUser = await this.userModel.create({
-      email: userInfo.email,
+      email: userInfo.email?.toLowerCase(),
       fullName: userInfo.fullName,
       phone: userInfo.phone,
     });
@@ -75,7 +82,7 @@ export class UsersService {
     // userId field in Feedback schema is ObjectId, so we need to match it properly
     // Use user._id directly (it's already ObjectId in lean query)
     const userObjectId = user._id;
-    
+
     const feedbacks = await this.feedbackModel
       .find({ userId: userObjectId })
       .populate('regionId', 'id name')
@@ -88,7 +95,7 @@ export class UsersService {
       feedbacks: feedbacks.map((feedback: any) => {
         // Format similar to FeedbacksService.formatFeedback
         const feedbackId = feedback._id?.toString() || feedback.id;
-        
+
         // Handle regionId
         let regionId: string | undefined;
         let region: { id: string; name: string } | undefined;
@@ -101,7 +108,10 @@ export class UsersService {
                 name: feedback.regionId.name,
               };
             }
-          } else if (typeof feedback.regionId === 'object' && feedback.regionId.id) {
+          } else if (
+            typeof feedback.regionId === 'object' &&
+            feedback.regionId.id
+          ) {
             regionId = feedback.regionId.id.toString();
             if (regionId) {
               region = {
@@ -116,7 +126,9 @@ export class UsersService {
 
         // Handle ratingId
         let ratingId: string | undefined;
-        let rating: { id: string; rating: number; comment?: string } | undefined;
+        let rating:
+          | { id: string; rating: number; comment?: string }
+          | undefined;
         if (feedback.ratingId) {
           if (typeof feedback.ratingId === 'object' && feedback.ratingId._id) {
             ratingId = feedback.ratingId._id.toString();
@@ -127,7 +139,10 @@ export class UsersService {
                 comment: feedback.ratingId.comment,
               };
             }
-          } else if (typeof feedback.ratingId === 'object' && feedback.ratingId.id) {
+          } else if (
+            typeof feedback.ratingId === 'object' &&
+            feedback.ratingId.id
+          ) {
             ratingId = feedback.ratingId.id.toString();
             if (ratingId) {
               rating = {
@@ -169,7 +184,7 @@ export class UsersService {
   async getUserFeedbacks(userId: string) {
     // Convert string id to ObjectId
     const userObjectId = new Types.ObjectId(userId);
-    
+
     const feedbacks = await this.feedbackModel
       .find({ userId: userObjectId })
       .populate('regionId', 'id name')
@@ -180,7 +195,7 @@ export class UsersService {
     return feedbacks.map((feedback: any) => {
       // Format similar to FeedbacksService.formatFeedback
       const feedbackId = feedback._id?.toString() || feedback.id;
-      
+
       // Handle regionId
       let regionId: string | undefined;
       let region: { id: string; name: string } | undefined;
@@ -193,7 +208,10 @@ export class UsersService {
               name: feedback.regionId.name,
             };
           }
-        } else if (typeof feedback.regionId === 'object' && feedback.regionId.id) {
+        } else if (
+          typeof feedback.regionId === 'object' &&
+          feedback.regionId.id
+        ) {
           regionId = feedback.regionId.id.toString();
           if (regionId) {
             region = {
@@ -219,7 +237,10 @@ export class UsersService {
               comment: feedback.ratingId.comment,
             };
           }
-        } else if (typeof feedback.ratingId === 'object' && feedback.ratingId.id) {
+        } else if (
+          typeof feedback.ratingId === 'object' &&
+          feedback.ratingId.id
+        ) {
           ratingId = feedback.ratingId.id.toString();
           if (ratingId) {
             rating = {

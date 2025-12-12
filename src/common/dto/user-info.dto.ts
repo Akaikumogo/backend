@@ -11,7 +11,8 @@ export class UserInfoDto {
   @IsString()
   phone?: string;
 
-  @ApiProperty({ required: true, description: 'Email address' })
+  @ApiPropertyOptional({ description: 'Email address' })
+  @IsOptional()
   @IsEmail()
-  email!: string;
+  email?: string;
 }

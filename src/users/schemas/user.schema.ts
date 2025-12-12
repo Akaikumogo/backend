@@ -9,8 +9,8 @@ import mongooseLeanVirtuals from 'mongoose-lean-virtuals';
   toObject: { virtuals: true, versionKey: false },
 })
 export class User extends BaseEntity {
-  @Prop({ required: true, unique: true, lowercase: true, trim: true })
-  email!: string;
+  @Prop({ required: false, unique: false, lowercase: true, trim: true })
+  email?: string;
 
   @Prop({ required: true })
   fullName!: string;
@@ -28,4 +28,3 @@ UserSchema.virtual('id').get(function (this: UserDocument) {
 });
 
 UserSchema.plugin(mongooseLeanVirtuals);
-

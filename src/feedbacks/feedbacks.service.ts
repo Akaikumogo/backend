@@ -1,4 +1,8 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import type { SortOrder } from 'mongoose';
@@ -32,9 +36,9 @@ export class FeedbacksService {
     await this.ensureRegion(dto.regionId);
     await this.ensureRating(dto.ratingId);
 
-    // Create or update user if not anonymous and has email
+    // Create or update user if not anonymous and has user info
     let userId: Types.ObjectId | undefined;
-    if (!dto.anonymous && dto.userInfo?.email) {
+    if (!dto.anonymous && dto.userInfo?.fullName) {
       const user = await this.usersService.findOrCreate({
         fullName: dto.userInfo.fullName,
         phone: dto.userInfo.phone,
@@ -69,7 +73,7 @@ export class FeedbacksService {
         id: feedback.id,
         submittedAt: feedback.submittedAt,
       },
-      actionText: 'Yangi mulohaza qo\'shildi',
+      actionText: "Yangi mulohaza qo'shildi",
     };
   }
 
@@ -84,8 +88,10 @@ export class FeedbacksService {
       }
 
       // Admin faqat o'ziga biriktirilgan hududlarni ko'ra oladi
-      const allowedRegionIds = currentUser.allowedRegions.map((id) => new Types.ObjectId(id));
-      
+      const allowedRegionIds = currentUser.allowedRegions.map(
+        (id) => new Types.ObjectId(id),
+      );
+
       if (region) {
         // Agar region parametri berilgan bo'lsa, u admin'ning allowedRegions'ida bo'lishi kerak
         if (!currentUser.allowedRegions.includes(region)) {
@@ -143,7 +149,7 @@ export class FeedbacksService {
     return {
       meta: buildPaginationMeta(total, page, limit),
       data: data.map((item) => this.formatFeedback(item)),
-      actionText: 'Admin mulohazalarni ko\'rdi',
+      actionText: "Admin mulohazalarni ko'rdi",
     };
   }
 
@@ -174,7 +180,10 @@ export class FeedbacksService {
       if (feedback.regionId) {
         if (typeof feedback.regionId === 'object' && feedback.regionId._id) {
           feedbackRegionId = feedback.regionId._id.toString();
-        } else if (typeof feedback.regionId === 'object' && feedback.regionId.id) {
+        } else if (
+          typeof feedback.regionId === 'object' &&
+          feedback.regionId.id
+        ) {
           feedbackRegionId = feedback.regionId.id.toString();
         } else {
           feedbackRegionId = feedback.regionId.toString();
@@ -183,7 +192,10 @@ export class FeedbacksService {
 
       // Check if feedbackRegionId is in allowedRegions (same logic as findAll)
       // allowedRegions is already string[], so we can directly use includes
-      if (!feedbackRegionId || !currentUser.allowedRegions.includes(feedbackRegionId)) {
+      if (
+        !feedbackRegionId ||
+        !currentUser.allowedRegions.includes(feedbackRegionId)
+      ) {
         throw new ForbiddenException('Access denied');
       }
     }
@@ -194,7 +206,11 @@ export class FeedbacksService {
     };
   }
 
-  async update(id: string, dto: UpdateFeedbackStatusDto, currentUser: RequestUser) {
+  async update(
+    id: string,
+    dto: UpdateFeedbackStatusDto,
+    currentUser: RequestUser,
+  ) {
     // Validate ObjectId format
     if (!Types.ObjectId.isValid(id)) {
       throw new NotFoundException('Feedback not found');
@@ -215,7 +231,10 @@ export class FeedbacksService {
       let feedbackRegionId: string;
       if (typeof feedback.regionId === 'object' && feedback.regionId._id) {
         feedbackRegionId = feedback.regionId._id.toString();
-      } else if (typeof feedback.regionId === 'object' && feedback.regionId.id) {
+      } else if (
+        typeof feedback.regionId === 'object' &&
+        feedback.regionId.id
+      ) {
         feedbackRegionId = feedback.regionId.id.toString();
       } else {
         feedbackRegionId = feedback.regionId.toString();
@@ -286,7 +305,10 @@ export class FeedbacksService {
     if (feedback.ratingId) {
       if (typeof feedback.ratingId === 'object' && feedback.ratingId._id) {
         ratingId = feedback.ratingId._id.toString();
-      } else if (typeof feedback.ratingId === 'object' && feedback.ratingId.id) {
+      } else if (
+        typeof feedback.ratingId === 'object' &&
+        feedback.ratingId.id
+      ) {
         ratingId = feedback.ratingId.id.toString();
       } else {
         ratingId = feedback.ratingId.toString();
@@ -298,7 +320,10 @@ export class FeedbacksService {
     if (feedback.regionId) {
       if (typeof feedback.regionId === 'object' && feedback.regionId._id) {
         regionId = feedback.regionId._id.toString();
-      } else if (typeof feedback.regionId === 'object' && feedback.regionId.id) {
+      } else if (
+        typeof feedback.regionId === 'object' &&
+        feedback.regionId.id
+      ) {
         regionId = feedback.regionId.id.toString();
       } else {
         regionId = feedback.regionId.toString();
@@ -309,20 +334,26 @@ export class FeedbacksService {
       id: feedbackId,
       feedbackId: feedbackId,
       ratingId: ratingId,
-      rating: feedback.ratingId && typeof feedback.ratingId === 'object'
-        ? {
-            id: feedback.ratingId._id?.toString() || feedback.ratingId.id?.toString(),
-            rating: feedback.ratingId.rating,
-            comment: feedback.ratingId.comment,
-          }
-        : undefined,
+      rating:
+        feedback.ratingId && typeof feedback.ratingId === 'object'
+          ? {
+              id:
+                feedback.ratingId._id?.toString() ||
+                feedback.ratingId.id?.toString(),
+              rating: feedback.ratingId.rating,
+              comment: feedback.ratingId.comment,
+            }
+          : undefined,
       regionId: regionId,
-      region: feedback.regionId && typeof feedback.regionId === 'object'
-        ? {
-            id: feedback.regionId._id?.toString() || feedback.regionId.id?.toString(),
-            name: feedback.regionId.name,
-          }
-        : undefined,
+      region:
+        feedback.regionId && typeof feedback.regionId === 'object'
+          ? {
+              id:
+                feedback.regionId._id?.toString() ||
+                feedback.regionId.id?.toString(),
+              name: feedback.regionId.name,
+            }
+          : undefined,
       userInfo: feedback.userInfo,
       anonymous: feedback.anonymous,
       subject: feedback.subject,
