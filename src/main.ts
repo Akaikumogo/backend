@@ -35,9 +35,7 @@ async function bootstrap() {
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
   // Serve static files from public folder
-  app.useStaticAssets(join(__dirname, '..', 'public'), {
-    prefix: '/',
-  });
+  app.use(express.static(join(__dirname, '..', 'public')));
 
   app.useGlobalPipes(
     new ValidationPipe({
