@@ -5,6 +5,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import * as helmet from 'helmet';
 import * as express from 'express';
+import { join } from 'path';
 import { AppModule } from './app.module';
 import { GlobalHttpExceptionFilter } from './common/filters/http-exception.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
@@ -32,6 +33,11 @@ async function bootstrap() {
   // Request size limiting (10MB max)
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+  // Serve static files from public folder
+  app.useStaticAssets(join(__dirname, '..', 'public'), {
+    prefix: '/',
+  });
 
   app.useGlobalPipes(
     new ValidationPipe({
